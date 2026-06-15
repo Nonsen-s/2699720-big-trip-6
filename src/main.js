@@ -5,7 +5,7 @@ import FilterModel from './model/filter-model.js';
 import TripApiService from './trip-api-service.js';
 import { UpdateType } from './const.js';
 
-const END_POINT = 'https://24.objects.htmlacademy.pro/big-trip';
+const END_POINT = 'https://23.objects.htmlacademy.pro/big-trip';
 const AUTHORIZATION = `Basic ${Math.random().toString(36).slice(2)}`;
 
 const tripMainContainer = document.querySelector('.trip-main');
