@@ -1,18 +1,24 @@
-import { createElement } from '../render.js';
+import AbstractView from '../framework/view/abstract-view.js';
 import { formatDate, formatDuration, formatTime } from '../utils/point.js';
 
-export default class Point {
+export default class Point extends AbstractView {
+  #point = null;
+  #destination = null;
+  #offers = [];
+  #handleEditClick = null;
+
   constructor({ point, destination, offers = [] }) {
-    this._point = point;
-    this._destination = destination;
-    this._offers = offers;
+    super();
+    this.#point = point;
+    this.#destination = destination;
+    this.#offers = offers;
   }
 
-  _renderOffers() {
-    if (!this._offers.length) {
+  #renderOffers() {
+    if (!this.#offers.length) {
       return '';
     }
-    const items = this._offers.map(({ title, price }) => `
+    const items = this.#offers.map(({ title, price }) => `
       <li class="event__offer">
         <span class="event__offer-title">${title}</span>
         &plus;&euro;&nbsp;
@@ -28,9 +34,9 @@ export default class Point {
     `;
   }
 
-  getTemplate() {
-    const { type, dateFrom, dateTo, basePrice, isFavorite } = this._point;
-    const title = `${type[0].toUpperCase()}${type.slice(1)} ${this._destination.name}`;
+  get template() {
+    const { type, dateFrom, dateTo, basePrice, isFavorite } = this.#point;
+    const title = `${type[0].toUpperCase()}${type.slice(1)} ${this.#destination.name}`;
 
     return `
       <li class="trip-events__item">
@@ -51,7 +57,7 @@ export default class Point {
           <p class="event__price">
             &euro;&nbsp;<span class="event__price-value">${basePrice}</span>
           </p>
-          ${this._renderOffers()}
+          ${this.#renderOffers()}
           <button class="event__favorite-btn${isFavorite ? '  event__favorite-btn--active' : ''}" type="button">
             <span class="visually-hidden">Add to favorite</span>
             <svg class="event__favorite-icon" width="28" height="28" viewBox="0 0 28 28">
@@ -66,10 +72,13 @@ export default class Point {
     `;
   }
 
-  getElement() {
-    if (!this._element) {
-      this._element = createElement(this.getTemplate());
-    }
-    return this._element;
+  setEditClickHandler(callback) {
+    this.#handleEditClick = callback;
+    this.element.querySelector('.event__rollup-btn').addEventListener('click', this.#editClickHandler);
   }
+
+  #editClickHandler = (evt) => {
+    evt.preventDefault();
+    this.#handleEditClick();
+  };
 }
