@@ -160,15 +160,17 @@ export default class TripPresenter {
   #handleViewAction = (actionType, updateType, update) => {
     switch (actionType) {
       case UserAction.UPDATE_POINT:
-        this.#tripModel.updatePoint(updateType, update).catch(() => {});
-        break;
+        return this.#tripModel.updatePoint(updateType, update);
       case UserAction.ADD_POINT:
-        this.#tripModel.addPoint(updateType, update);
-        break;
+        return this.#tripModel.addPoint(updateType, update)
+          .then(() => {
+            this.#handleNewPointDestroy();
+          });
       case UserAction.DELETE_POINT:
-        this.#tripModel.deletePoint(updateType, update);
-        break;
+        return this.#tripModel.deletePoint(updateType, update);
     }
+
+    return Promise.resolve();
   };
 
   #handleModelEvent = (updateType, data) => {

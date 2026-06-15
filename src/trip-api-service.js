@@ -15,7 +15,6 @@ function adaptPointToClient(point) {
 
 function adaptPointToServer(point) {
   return {
-    id: point.id,
     type: point.type,
     destination: point.destinationId,
     offers: point.offerIds,
@@ -62,5 +61,25 @@ export default class TripApiService extends ApiService {
     const parsedPoint = await ApiService.parseResponse(response);
 
     return adaptPointToClient(parsedPoint);
+  }
+
+  async addPoint(point) {
+    const response = await this._load({
+      url: 'points',
+      method: 'POST',
+      body: JSON.stringify(adaptPointToServer(point)),
+      headers: new Headers({ 'Content-Type': 'application/json' }),
+    });
+
+    const parsedPoint = await ApiService.parseResponse(response);
+
+    return adaptPointToClient(parsedPoint);
+  }
+
+  async deletePoint(point) {
+    await this._load({
+      url: `points/${point.id}`,
+      method: 'DELETE',
+    });
   }
 }

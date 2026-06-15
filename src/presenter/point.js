@@ -58,26 +58,44 @@ export default class PointPresenter {
           ...this.#point,
           isFavorite: !this.#point.isFavorite,
         }
-      );
+      ).catch(() => {});
     });
 
     this.#editPointComponent.setFormSubmitHandler((updatedPoint) => {
+      this.#editPointComponent.updateData({
+        isSaving: true,
+      });
+
       this.#handleDataChange(
         UserAction.UPDATE_POINT,
         UpdateType.MINOR,
         updatedPoint
-      );
+      ).catch(() => {
+        this.#editPointComponent.updateData({
+          isSaving: false,
+        });
+        this.#editPointComponent.shake();
+      });
     });
 
     this.#editPointComponent.setRollupClickHandler(() => {
       this.#replaceFormToCard();
     });
     this.#editPointComponent.setDeleteClickHandler((updatedPoint) => {
+      this.#editPointComponent.updateData({
+        isDeleting: true,
+      });
+
       this.#handleDataChange(
         UserAction.DELETE_POINT,
         UpdateType.MINOR,
         updatedPoint
-      );
+      ).catch(() => {
+        this.#editPointComponent.updateData({
+          isDeleting: false,
+        });
+        this.#editPointComponent.shake();
+      });
     });
     this.#editPointComponent.setInnerHandlers();
 
