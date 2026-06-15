@@ -22,6 +22,7 @@ export default class NewPointPresenter {
   #handleDataChange = null;
   #handleDestroy = null;
   #newPointComponent = null;
+  #isSaving = false;
 
   constructor({ pointListContainer, destinations, offers, onDataChange, onDestroy }) {
     this.#pointListContainer = pointListContainer;
@@ -66,6 +67,8 @@ export default class NewPointPresenter {
   }
 
   #formSubmitHandler = (point) => {
+    this.#isSaving = true;
+
     this.#newPointComponent.updateData({
       isSaving: true,
     });
@@ -75,6 +78,7 @@ export default class NewPointPresenter {
       UpdateType.MINOR,
       point
     ).catch(() => {
+      this.#isSaving = false;
       this.#newPointComponent.updateData({
         isSaving: false,
       });
@@ -83,12 +87,21 @@ export default class NewPointPresenter {
   };
 
   #deleteClickHandler = () => {
+    if (this.#isSaving) {
+      return;
+    }
+
     this.destroy();
   };
 
   #escKeydownHandler = (evt) => {
     if (evt.key === 'Escape' || evt.key === 'Esc') {
       evt.preventDefault();
+
+      if (this.#isSaving) {
+        return;
+      }
+
       this.destroy();
     }
   };
