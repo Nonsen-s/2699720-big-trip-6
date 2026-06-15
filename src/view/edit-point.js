@@ -10,6 +10,14 @@ function getDatePickerDate(date) {
   return date ? new Date(date) : null;
 }
 
+function getResetButtonText({ isDeleting, isNew }) {
+  if (isDeleting) {
+    return 'Deleting...';
+  }
+
+  return isNew ? 'Cancel' : 'Delete';
+}
+
 const DEFAULT_POINT = {
   id: 'new-point',
   type: 'flight',
@@ -18,6 +26,8 @@ const DEFAULT_POINT = {
   dateFrom: '',
   dateTo: '',
   basePrice: '',
+  isDeleting: false,
+  isSaving: false,
 };
 
 export default class EditPoint extends AbstractStatefulView {
@@ -62,7 +72,7 @@ export default class EditPoint extends AbstractStatefulView {
 
     const items = offersByType.map(({ id, title, price }) => `
       <div class="event__offer-selector">
-        <input class="event__offer-checkbox  visually-hidden" id="event-offer-${id}" type="checkbox" name="event-offer-${id}" value="${id}"${this._state.offerIds.includes(id) ? ' checked' : ''}>
+        <input class="event__offer-checkbox  visually-hidden" id="event-offer-${id}" type="checkbox" name="event-offer-${id}" value="${id}"${this._state.offerIds.includes(id) ? ' checked' : ''}${this._state.isSaving || this._state.isDeleting ? ' disabled' : ''}>
         <label class="event__offer-label" for="event-offer-${id}">
           <span class="event__offer-title">${title}</span>
           &plus;&euro;&nbsp;
@@ -120,10 +130,12 @@ export default class EditPoint extends AbstractStatefulView {
   }
 
   get template() {
-    const { id, type, destinationId, dateFrom, dateTo, basePrice } = this._state;
+    const { id, type, destinationId, dateFrom, dateTo, basePrice, isDeleting, isSaving } = this._state;
     const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
     const destination = this.#destinations.find((item) => item.id === destinationId);
-    const resetLabel = this.#isNew ? 'Cancel' : 'Delete';
+    const resetLabel = getResetButtonText({ isDeleting, isNew: this.#isNew });
+    const saveLabel = isSaving ? 'Saving...' : 'Save';
+    const isDisabled = isDeleting || isSaving;
     const destinationName = destination ? destination.name : '';
     const startTime = dateFrom ? formatEditDate(dateFrom) : '';
     const endTime = dateTo ? formatEditDate(dateTo) : '';
@@ -137,10 +149,10 @@ export default class EditPoint extends AbstractStatefulView {
                 <span class="visually-hidden">Choose event type</span>
                 <img class="event__type-icon" width="17" height="17" src="img/icons/${type}.png" alt="Event type icon">
               </label>
-              <input class="event__type-toggle  visually-hidden" id="event-type-toggle-${id}" type="checkbox">
+              <input class="event__type-toggle  visually-hidden" id="event-type-toggle-${id}" type="checkbox"${isDisabled ? ' disabled' : ''}>
 
               <div class="event__type-list">
-                <fieldset class="event__type-group">
+                <fieldset class="event__type-group"${isDisabled ? ' disabled' : ''}>
                   <legend class="visually-hidden">Event type</legend>
                   ${this.#renderTypeItems()}
                 </fieldset>
@@ -151,7 +163,7 @@ export default class EditPoint extends AbstractStatefulView {
               <label class="event__label  event__type-output" for="event-destination-${id}">
                 ${typeLabel}
               </label>
-              <input class="event__input  event__input--destination" id="event-destination-${id}" type="text" name="event-destination" value="${destinationName}" list="destination-list-${id}" required>
+              <input class="event__input  event__input--destination" id="event-destination-${id}" type="text" name="event-destination" value="${destinationName}" list="destination-list-${id}" required${isDisabled ? ' disabled' : ''}>
               <datalist id="destination-list-${id}">
                 ${this.#renderDestinationOptions()}
               </datalist>
@@ -159,10 +171,10 @@ export default class EditPoint extends AbstractStatefulView {
 
             <div class="event__field-group  event__field-group--time">
               <label class="visually-hidden" for="event-start-time-${id}">From</label>
-              <input class="event__input  event__input--time" id="event-start-time-${id}" type="text" name="event-start-time" value="${startTime}">
+              <input class="event__input  event__input--time" id="event-start-time-${id}" type="text" name="event-start-time" value="${startTime}"${isDisabled ? ' disabled' : ''}>
               &mdash;
               <label class="visually-hidden" for="event-end-time-${id}">To</label>
-              <input class="event__input  event__input--time" id="event-end-time-${id}" type="text" name="event-end-time" value="${endTime}">
+              <input class="event__input  event__input--time" id="event-end-time-${id}" type="text" name="event-end-time" value="${endTime}"${isDisabled ? ' disabled' : ''}>
             </div>
 
             <div class="event__field-group  event__field-group--price">
@@ -170,13 +182,13 @@ export default class EditPoint extends AbstractStatefulView {
                 <span class="visually-hidden">Price</span>
                 &euro;
               </label>
-              <input class="event__input  event__input--price" id="event-price-${id}" type="number" name="event-price" min="0" value="${basePrice}" required>
+              <input class="event__input  event__input--price" id="event-price-${id}" type="number" name="event-price" min="0" value="${basePrice}" required${isDisabled ? ' disabled' : ''}>
             </div>
 
-            <button class="event__save-btn  btn  btn--blue" type="submit">Save</button>
-            <button class="event__reset-btn" type="reset">${resetLabel}</button>
+            <button class="event__save-btn  btn  btn--blue" type="submit"${isDisabled ? ' disabled' : ''}>${saveLabel}</button>
+            <button class="event__reset-btn" type="reset"${isDisabled ? ' disabled' : ''}>${resetLabel}</button>
             ${!this.#isNew ? `
-            <button class="event__rollup-btn" type="button">
+            <button class="event__rollup-btn" type="button"${isDisabled ? ' disabled' : ''}>
               <span class="visually-hidden">Open event</span>
             </button>` : ''}
           </header>
@@ -206,6 +218,11 @@ export default class EditPoint extends AbstractStatefulView {
 
   setInnerHandlers() {
     this.#setInnerHandlers();
+  }
+
+  updateData(update) {
+    this.#destroyDatePickers();
+    this.updateElement(update);
   }
 
   _restoreHandlers() {

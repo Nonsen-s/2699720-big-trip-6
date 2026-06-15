@@ -70,12 +70,20 @@ export default class NewPointPresenter {
   }
 
   #formSubmitHandler = (point) => {
+    this.#newPointComponent.updateData({
+      isSaving: true,
+    });
+
     this.#handleDataChange(
       UserAction.ADD_POINT,
       UpdateType.MINOR,
       point
-    );
-    this.#handleDestroy();
+    ).catch(() => {
+      this.#newPointComponent.updateData({
+        isSaving: false,
+      });
+      this.#newPointComponent.shake();
+    });
   };
 
   #deleteClickHandler = () => {
