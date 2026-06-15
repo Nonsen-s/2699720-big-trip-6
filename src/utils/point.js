@@ -1,32 +1,19 @@
-const DateFormat = {
-  DATE: { month: 'short', day: 'numeric' },
-  TIME: { hour: '2-digit', minute: '2-digit' },
-};
+import dayjs from 'dayjs';
 
 function formatDate(date) {
-  return new Intl.DateTimeFormat('en-US', DateFormat.DATE)
-    .format(new Date(date))
-    .toUpperCase();
+  return dayjs(date).format('MMM D').toUpperCase();
 }
 
 function formatTime(date) {
-  return new Intl.DateTimeFormat('en-GB', DateFormat.TIME).format(new Date(date));
+  return dayjs(date).format('HH:mm');
 }
 
 function formatEditDate(date) {
-  const parsedDate = new Date(date);
-  const day = String(parsedDate.getDate()).padStart(2, '0');
-  const month = String(parsedDate.getMonth() + 1).padStart(2, '0');
-  const year = String(parsedDate.getFullYear()).slice(-2);
-  const hours = String(parsedDate.getHours()).padStart(2, '0');
-  const minutes = String(parsedDate.getMinutes()).padStart(2, '0');
-
-  return `${day}/${month}/${year} ${hours}:${minutes}`;
+  return dayjs(date).format('DD/MM/YY HH:mm');
 }
 
 function formatDuration(dateFrom, dateTo) {
-  const duration = new Date(dateTo) - new Date(dateFrom);
-  const totalMinutes = Math.floor(duration / 60000);
+  const totalMinutes = dayjs(dateTo).diff(dayjs(dateFrom), 'minute');
   const days = Math.floor(totalMinutes / 1440);
   const hours = Math.floor((totalMinutes % 1440) / 60);
   const minutes = totalMinutes % 60;
