@@ -1,4 +1,4 @@
-import { createElement } from '../render.js';
+import AbstractView from '../framework/view/abstract-view.js';
 import { EVENT_TYPES } from '../const.js';
 import { formatEditDate } from '../utils/point.js';
 
@@ -12,16 +12,24 @@ const DEFAULT_POINT = {
   basePrice: '',
 };
 
-export default class EditPoint {
+export default class EditPoint extends AbstractView {
+  #point = null;
+  #destinations = [];
+  #offers = [];
+  #isNew = false;
+  #handleFormSubmit = null;
+  #handleRollupClick = null;
+
   constructor({ point = DEFAULT_POINT, destinations = [], offers = [], isNew = false } = {}) {
-    this._point = point;
-    this._destinations = destinations;
-    this._offers = offers;
-    this._isNew = isNew;
+    super();
+    this.#point = point;
+    this.#destinations = destinations;
+    this.#offers = offers;
+    this.#isNew = isNew;
   }
 
-  _renderTypeItems() {
-    const { id, type } = this._point;
+  #renderTypeItems() {
+    const { id, type } = this.#point;
 
     return EVENT_TYPES.map((t) => `
       <div class="event__type-item">
@@ -31,12 +39,12 @@ export default class EditPoint {
     `).join('');
   }
 
-  _renderDestinationOptions() {
-    return this._destinations.map(({ name }) => `<option value="${name}"></option>`).join('');
+  #renderDestinationOptions() {
+    return this.#destinations.map(({ name }) => `<option value="${name}"></option>`).join('');
   }
 
-  _renderOffers() {
-    const offersByType = this._offers.filter((offer) => offer.type === this._point.type);
+  #renderOffers() {
+    const offersByType = this.#offers.filter((offer) => offer.type === this.#point.type);
 
     if (!offersByType.length) {
       return '';
@@ -44,7 +52,7 @@ export default class EditPoint {
 
     const items = offersByType.map(({ id, title, price }) => `
       <div class="event__offer-selector">
-        <input class="event__offer-checkbox  visually-hidden" id="event-offer-${id}" type="checkbox" name="event-offer-${id}"${this._point.offerIds.includes(id) ? ' checked' : ''}>
+        <input class="event__offer-checkbox  visually-hidden" id="event-offer-${id}" type="checkbox" name="event-offer-${id}"${this.#point.offerIds.includes(id) ? ' checked' : ''}>
         <label class="event__offer-label" for="event-offer-${id}">
           <span class="event__offer-title">${title}</span>
           &plus;&euro;&nbsp;
@@ -63,8 +71,8 @@ export default class EditPoint {
     `;
   }
 
-  _renderDestinationDetails() {
-    const destination = this._destinations.find((item) => item.id === this._point.destinationId);
+  #renderDestinationDetails() {
+    const destination = this.#destinations.find((item) => item.id === this.#point.destinationId);
 
     if (!destination || (!destination.description && !destination.pictures.length)) {
       return '';
@@ -87,9 +95,9 @@ export default class EditPoint {
     `;
   }
 
-  _renderDetails() {
-    const offersHtml = this._renderOffers();
-    const destinationHtml = this._renderDestinationDetails();
+  #renderDetails() {
+    const offersHtml = this.#renderOffers();
+    const destinationHtml = this.#renderDestinationDetails();
     if (!offersHtml && !destinationHtml) {
       return '';
     }
@@ -101,11 +109,11 @@ export default class EditPoint {
     `;
   }
 
-  getTemplate() {
-    const { id, type, destinationId, dateFrom, dateTo, basePrice } = this._point;
+  get template() {
+    const { id, type, destinationId, dateFrom, dateTo, basePrice } = this.#point;
     const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
-    const destination = this._destinations.find((item) => item.id === destinationId);
-    const resetLabel = this._isNew ? 'Cancel' : 'Delete';
+    const destination = this.#destinations.find((item) => item.id === destinationId);
+    const resetLabel = this.#isNew ? 'Cancel' : 'Delete';
     const destinationName = destination ? destination.name : '';
     const startTime = dateFrom ? formatEditDate(dateFrom) : '';
     const endTime = dateTo ? formatEditDate(dateTo) : '';
@@ -124,7 +132,7 @@ export default class EditPoint {
               <div class="event__type-list">
                 <fieldset class="event__type-group">
                   <legend class="visually-hidden">Event type</legend>
-                  ${this._renderTypeItems()}
+                  ${this.#renderTypeItems()}
                 </fieldset>
               </div>
             </div>
@@ -135,7 +143,7 @@ export default class EditPoint {
               </label>
               <input class="event__input  event__input--destination" id="event-destination-${id}" type="text" name="event-destination" value="${destinationName}" list="destination-list-${id}">
               <datalist id="destination-list-${id}">
-                ${this._renderDestinationOptions()}
+                ${this.#renderDestinationOptions()}
               </datalist>
             </div>
 
@@ -157,21 +165,37 @@ export default class EditPoint {
 
             <button class="event__save-btn  btn  btn--blue" type="submit">Save</button>
             <button class="event__reset-btn" type="reset">${resetLabel}</button>
-            ${!this._isNew ? `
+            ${!this.#isNew ? `
             <button class="event__rollup-btn" type="button">
               <span class="visually-hidden">Open event</span>
             </button>` : ''}
           </header>
-          ${this._renderDetails()}
+          ${this.#renderDetails()}
         </form>
       </li>
     `;
   }
 
-  getElement() {
-    if (!this._element) {
-      this._element = createElement(this.getTemplate());
-    }
-    return this._element;
+  setFormSubmitHandler(callback) {
+    this.#handleFormSubmit = callback;
+    this.element.querySelector('form').addEventListener('submit', this.#formSubmitHandler);
   }
+
+  setRollupClickHandler(callback) {
+    this.#handleRollupClick = callback;
+
+    if (!this.#isNew) {
+      this.element.querySelector('.event__rollup-btn').addEventListener('click', this.#rollupClickHandler);
+    }
+  }
+
+  #formSubmitHandler = (evt) => {
+    evt.preventDefault();
+    this.#handleFormSubmit();
+  };
+
+  #rollupClickHandler = (evt) => {
+    evt.preventDefault();
+    this.#handleRollupClick();
+  };
 }

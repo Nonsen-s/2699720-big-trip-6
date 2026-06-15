@@ -1,4 +1,4 @@
-import { render, RenderPosition } from '../render.js';
+import { render, replace, RenderPosition } from '../framework/render.js';
 import TripInfo from '../view/trip-info.js';
 import Filter from '../view/filter.js';
 import Sort from '../view/sort.js';
@@ -6,51 +6,102 @@ import PointList from '../view/point-list.js';
 import Point from '../view/point.js';
 import EditPoint from '../view/edit-point.js';
 
+const Mode = {
+  DEFAULT: 'DEFAULT',
+  EDITING: 'EDITING',
+};
+
 export default class TripPresenter {
+  #tripMainContainer = null;
+  #filterContainer = null;
+  #tripEventsContainer = null;
+  #tripModel = null;
+
   constructor({ tripMainContainer, filterContainer, tripEventsContainer, tripModel }) {
-    this._tripMainContainer = tripMainContainer;
-    this._filterContainer = filterContainer;
-    this._tripEventsContainer = tripEventsContainer;
-    this._tripModel = tripModel;
+    this.#tripMainContainer = tripMainContainer;
+    this.#filterContainer = filterContainer;
+    this.#tripEventsContainer = tripEventsContainer;
+    this.#tripModel = tripModel;
   }
 
   init() {
-    this._renderTripInfo();
-    this._renderFilter();
-    this._renderSort();
-    this._renderPointList();
+    this.#renderTripInfo();
+    this.#renderFilter();
+    this.#renderSort();
+    this.#renderPointList();
   }
 
-  _renderTripInfo() {
-    render(new TripInfo(), this._tripMainContainer, RenderPosition.AFTERBEGIN);
+  #renderTripInfo() {
+    render(new TripInfo(), this.#tripMainContainer, RenderPosition.AFTERBEGIN);
   }
 
-  _renderFilter() {
-    render(new Filter(), this._filterContainer);
+  #renderFilter() {
+    render(new Filter(), this.#filterContainer);
   }
 
-  _renderSort() {
-    render(new Sort(), this._tripEventsContainer);
+  #renderSort() {
+    render(new Sort(), this.#tripEventsContainer);
   }
 
-  _renderPointList() {
+  #renderPointList() {
     const pointList = new PointList();
-    render(pointList, this._tripEventsContainer);
+    render(pointList, this.#tripEventsContainer);
 
-    const listElement = pointList.getElement();
-    const [firstPoint] = this._tripModel.points;
-
-    render(new EditPoint({
-      point: firstPoint,
-      destinations: this._tripModel.destinations,
-      offers: this._tripModel.offers,
-    }), listElement);
-
-    this._tripModel.points.forEach((point) => {
-      const destination = this._tripModel.destinations.find((item) => item.id === point.destinationId);
-      const offers = this._tripModel.offers.filter((offer) => point.offerIds.includes(offer.id));
-
-      render(new Point({ point, destination, offers }), listElement);
+    this.#tripModel.points.forEach((point) => {
+      this.#renderPoint(point, pointList.element);
     });
+  }
+
+  #renderPoint(point, container) {
+    const destination = this.#tripModel.destinations.find((item) => item.id === point.destinationId);
+    const selectedOffers = this.#tripModel.offers.filter((offer) => point.offerIds.includes(offer.id));
+    const pointComponent = new Point({ point, destination, offers: selectedOffers });
+    const editPointComponent = new EditPoint({
+      point,
+      destinations: this.#tripModel.destinations,
+      offers: this.#tripModel.offers,
+    });
+    let mode = Mode.DEFAULT;
+
+    const replaceCardToForm = () => {
+      if (mode === Mode.EDITING) {
+        return;
+      }
+
+      replace(editPointComponent, pointComponent);
+      document.addEventListener('keydown', onEscKeydown);
+      mode = Mode.EDITING;
+    };
+
+    const replaceFormToCard = () => {
+      if (mode === Mode.DEFAULT) {
+        return;
+      }
+
+      replace(pointComponent, editPointComponent);
+      document.removeEventListener('keydown', onEscKeydown);
+      mode = Mode.DEFAULT;
+    };
+
+    function onEscKeydown(evt) {
+      if (evt.key === 'Escape' || evt.key === 'Esc') {
+        evt.preventDefault();
+        replaceFormToCard();
+      }
+    }
+
+    pointComponent.setEditClickHandler(() => {
+      replaceCardToForm();
+    });
+
+    editPointComponent.setFormSubmitHandler(() => {
+      replaceFormToCard();
+    });
+
+    editPointComponent.setRollupClickHandler(() => {
+      replaceFormToCard();
+    });
+
+    render(pointComponent, container);
   }
 }
