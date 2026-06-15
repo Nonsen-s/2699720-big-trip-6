@@ -58,7 +58,9 @@ export default class PointPresenter {
           ...this.#point,
           isFavorite: !this.#point.isFavorite,
         }
-      ).catch(() => {});
+      ).catch(() => {
+        this.#pointComponent.shake();
+      });
     });
 
     this.#editPointComponent.setFormSubmitHandler((updatedPoint) => {
