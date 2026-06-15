@@ -1,25 +1,20 @@
-import { render, replace, RenderPosition } from '../framework/render.js';
+import { render, RenderPosition } from '../framework/render.js';
 import TripInfo from '../view/trip-info.js';
 import Filter from '../view/filter.js';
 import Sort from '../view/sort.js';
 import PointList from '../view/point-list.js';
-import Point from '../view/point.js';
-import EditPoint from '../view/edit-point.js';
 import NoPoint from '../view/no-point.js';
+import PointPresenter from './point.js';
 import { FilterType } from '../const.js';
 import { generateFilters } from '../utils/filter.js';
 import { generateTripInfo } from '../utils/trip-info.js';
-
-const Mode = {
-  DEFAULT: 'DEFAULT',
-  EDITING: 'EDITING',
-};
 
 export default class TripPresenter {
   #tripMainContainer = null;
   #filterContainer = null;
   #tripEventsContainer = null;
   #tripModel = null;
+  #pointPresenter = new Map();
 
   constructor({ tripMainContainer, filterContainer, tripEventsContainer, tripModel }) {
     this.#tripMainContainer = tripMainContainer;
@@ -75,55 +70,24 @@ export default class TripPresenter {
   }
 
   #renderPoint(point, container) {
-    const destination = this.#tripModel.destinations.find((item) => item.id === point.destinationId);
-    const selectedOffers = this.#tripModel.offers.filter((offer) => point.offerIds.includes(offer.id));
-    const pointComponent = new Point({ point, destination, offers: selectedOffers });
-    const editPointComponent = new EditPoint({
-      point,
+    const pointPresenter = new PointPresenter({
+      pointListContainer: container,
       destinations: this.#tripModel.destinations,
       offers: this.#tripModel.offers,
-    });
-    let mode = Mode.DEFAULT;
-
-    const replaceCardToForm = () => {
-      if (mode === Mode.EDITING) {
-        return;
-      }
-
-      replace(editPointComponent, pointComponent);
-      document.addEventListener('keydown', onEscKeydown);
-      mode = Mode.EDITING;
-    };
-
-    const replaceFormToCard = () => {
-      if (mode === Mode.DEFAULT) {
-        return;
-      }
-
-      replace(pointComponent, editPointComponent);
-      document.removeEventListener('keydown', onEscKeydown);
-      mode = Mode.DEFAULT;
-    };
-
-    function onEscKeydown(evt) {
-      if (evt.key === 'Escape' || evt.key === 'Esc') {
-        evt.preventDefault();
-        replaceFormToCard();
-      }
-    }
-
-    pointComponent.setEditClickHandler(() => {
-      replaceCardToForm();
+      onDataChange: this.#handlePointChange,
+      onModeChange: this.#handleModeChange,
     });
 
-    editPointComponent.setFormSubmitHandler(() => {
-      replaceFormToCard();
-    });
-
-    editPointComponent.setRollupClickHandler(() => {
-      replaceFormToCard();
-    });
-
-    render(pointComponent, container);
+    pointPresenter.init(point);
+    this.#pointPresenter.set(point.id, pointPresenter);
   }
+
+  #handlePointChange = (updatedPoint) => {
+    this.#tripModel.updatePoint(updatedPoint);
+    this.#pointPresenter.get(updatedPoint.id).init(updatedPoint);
+  };
+
+  #handleModeChange = () => {
+    this.#pointPresenter.forEach((presenter) => presenter.resetView());
+  };
 }
