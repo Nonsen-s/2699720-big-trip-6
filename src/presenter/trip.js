@@ -3,6 +3,8 @@ import TripInfo from '../view/trip-info.js';
 import Sort from '../view/sort.js';
 import PointList from '../view/point-list.js';
 import NoPoint from '../view/no-point.js';
+import Loading from '../view/loading.js';
+import FailedLoad from '../view/failed-load.js';
 import PointPresenter from './point.js';
 import NewPointPresenter from './new-point.js';
 import { FilterType, SortType, UpdateType, UserAction } from '../const.js';
@@ -22,6 +24,8 @@ export default class TripPresenter {
   #pointListComponent = null;
   #sortComponent = null;
   #noPointComponent = null;
+  #loadingComponent = new Loading();
+  #failedLoadComponent = new FailedLoad();
   #currentSortType = SortType.DAY;
 
   constructor({ tripMainContainer, tripEventsContainer, tripModel, filterModel, onNewPointDestroy }) {
@@ -36,6 +40,11 @@ export default class TripPresenter {
   }
 
   init() {
+    if (this.#tripModel.isLoading) {
+      this.#renderLoading();
+      return;
+    }
+
     this.#renderTripInfo();
     this.#renderTripEvents();
   }
@@ -97,6 +106,11 @@ export default class TripPresenter {
   }
 
   #renderTripEvents() {
+    if (this.#tripModel.isLoadFailed) {
+      this.#renderFailedLoad();
+      return;
+    }
+
     const points = this.#getPoints();
 
     if (points.length === 0) {
@@ -106,6 +120,14 @@ export default class TripPresenter {
 
     this.#renderSort();
     this.#renderPointList();
+  }
+
+  #renderLoading() {
+    render(this.#loadingComponent, this.#tripEventsContainer);
+  }
+
+  #renderFailedLoad() {
+    render(this.#failedLoadComponent, this.#tripEventsContainer);
   }
 
   #renderNoPoint() {
@@ -138,7 +160,7 @@ export default class TripPresenter {
   #handleViewAction = (actionType, updateType, update) => {
     switch (actionType) {
       case UserAction.UPDATE_POINT:
-        this.#tripModel.updatePoint(updateType, update);
+        this.#tripModel.updatePoint(updateType, update).catch(() => {});
         break;
       case UserAction.ADD_POINT:
         this.#tripModel.addPoint(updateType, update);
@@ -153,6 +175,11 @@ export default class TripPresenter {
     switch (updateType) {
       case UpdateType.PATCH:
         this.#pointPresenter.get(data.id).init(data);
+        break;
+      case UpdateType.INIT:
+        this.#clearTripEvents();
+        this.#renderTripInfo();
+        this.#renderTripEvents();
         break;
       case UpdateType.MINOR:
         this.#clearTripEvents();
@@ -227,6 +254,8 @@ export default class TripPresenter {
     this.#clearPointList();
     remove(this.#sortComponent);
     remove(this.#noPointComponent);
+    remove(this.#loadingComponent);
+    remove(this.#failedLoadComponent);
     this.#sortComponent = null;
     this.#noPointComponent = null;
   }
