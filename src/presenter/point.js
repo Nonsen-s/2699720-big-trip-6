@@ -1,6 +1,7 @@
-import { render, replace } from '../framework/render.js';
+import { render, replace, remove } from '../framework/render.js';
 import Point from '../view/point.js';
 import EditPoint from '../view/edit-point.js';
+import { UserAction, UpdateType } from '../const.js';
 
 const Mode = {
   DEFAULT: 'DEFAULT',
@@ -50,18 +51,33 @@ export default class PointPresenter {
     });
 
     this.#pointComponent.setFavoriteClickHandler(() => {
-      this.#handleDataChange({
-        ...this.#point,
-        isFavorite: !this.#point.isFavorite,
-      });
+      this.#handleDataChange(
+        UserAction.UPDATE_POINT,
+        UpdateType.PATCH,
+        {
+          ...this.#point,
+          isFavorite: !this.#point.isFavorite,
+        }
+      );
     });
 
-    this.#editPointComponent.setFormSubmitHandler(() => {
-      this.#replaceFormToCard();
+    this.#editPointComponent.setFormSubmitHandler((updatedPoint) => {
+      this.#handleDataChange(
+        UserAction.UPDATE_POINT,
+        UpdateType.MINOR,
+        updatedPoint
+      );
     });
 
     this.#editPointComponent.setRollupClickHandler(() => {
       this.#replaceFormToCard();
+    });
+    this.#editPointComponent.setDeleteClickHandler((updatedPoint) => {
+      this.#handleDataChange(
+        UserAction.DELETE_POINT,
+        UpdateType.MINOR,
+        updatedPoint
+      );
     });
     this.#editPointComponent.setInnerHandlers();
 
@@ -84,6 +100,12 @@ export default class PointPresenter {
     if (this.#mode !== Mode.DEFAULT) {
       this.#replaceFormToCard();
     }
+  }
+
+  destroy() {
+    document.removeEventListener('keydown', this.#escKeydownHandler);
+    remove(this.#pointComponent);
+    remove(this.#editPointComponent);
   }
 
   #replaceCardToForm() {
