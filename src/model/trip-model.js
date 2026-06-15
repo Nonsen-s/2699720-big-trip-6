@@ -1,50 +1,84 @@
-import { generateDestinations, generateOffers, generatePoints } from '../mock/point.js';
 import Observable from '../framework/observable.js';
+import { UpdateType } from '../const.js';
 
 export default class TripModel extends Observable {
-  constructor() {
+  #tripApiService = null;
+  #points = [];
+  #destinations = [];
+  #offers = [];
+  #isLoading = true;
+  #isLoadFailed = false;
+
+  constructor({ tripApiService }) {
     super();
-    this._points = generatePoints();
-    this._destinations = generateDestinations();
-    this._offers = generateOffers();
+    this.#tripApiService = tripApiService;
   }
 
   get points() {
-    return this._points;
-  }
-
-  set points(points) {
-    this._points = points;
+    return this.#points;
   }
 
   get destinations() {
-    return this._destinations;
+    return this.#destinations;
   }
 
   get offers() {
-    return this._offers;
+    return this.#offers;
+  }
+
+  get isLoading() {
+    return this.#isLoading;
+  }
+
+  get isLoadFailed() {
+    return this.#isLoadFailed;
+  }
+
+  async init() {
+    try {
+      const [points, destinations, offers] = await Promise.all([
+        this.#tripApiService.points,
+        this.#tripApiService.destinations,
+        this.#tripApiService.offers,
+      ]);
+
+      this.#points = points;
+      this.#destinations = destinations;
+      this.#offers = offers;
+      this.#isLoadFailed = false;
+    } catch {
+      this.#points = [];
+      this.#destinations = [];
+      this.#offers = [];
+      this.#isLoadFailed = true;
+    }
+
+    this.#isLoading = false;
+    this._notify(UpdateType.INIT);
   }
 
   setPoints(updateType, points) {
-    this._points = points;
+    this.#points = points;
     this._notify(updateType, points);
   }
 
-  updatePoint(updateType, update) {
-    this._points = this._points.map((point) => point.id === update.id ? update : point);
-    this._notify(updateType, update);
+  async updatePoint(updateType, update) {
+    const updatedPoint = await this.#tripApiService.updatePoint(update);
+
+    this.#points = this.#points.map((point) => point.id === updatedPoint.id ? updatedPoint : point);
+    this._notify(updateType, updatedPoint);
   }
 
   addPoint(updateType, update) {
-    this._points = [
+    this.#points = [
       update,
-      ...this._points,
+      ...this.#points,
     ];
     this._notify(updateType, update);
   }
 
   deletePoint(updateType, update) {
-    this._points = this._points.filter((point) => point.id !== update.id);
+    this.#points = this.#points.filter((point) => point.id !== update.id);
     this._notify(updateType);
   }
 }
