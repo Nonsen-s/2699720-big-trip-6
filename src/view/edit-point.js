@@ -1,54 +1,51 @@
 import { createElement } from '../render.js';
+import { EVENT_TYPES } from '../const.js';
+import { formatEditDate } from '../utils/point.js';
 
-const EVENT_TYPES = ['taxi', 'bus', 'train', 'ship', 'drive', 'flight', 'check-in', 'sightseeing', 'restaurant'];
-const DESTINATIONS = ['Amsterdam', 'Geneva', 'Chamonix'];
+const DEFAULT_POINT = {
+  id: 'new-point',
+  type: 'flight',
+  destinationId: '',
+  offerIds: [],
+  dateFrom: '',
+  dateTo: '',
+  basePrice: '',
+};
 
 export default class EditPoint {
-  constructor({
-    id = 1,
-    type = 'flight',
-    destination = 'Chamonix',
-    startTime = '18/03/19 12:25',
-    endTime = '18/03/19 13:35',
-    price = '160',
-    offers = [],
-    description = '',
-    photos = [],
-    isNew = false,
-  } = {}) {
-    this._id = id;
-    this._type = type;
-    this._destination = destination;
-    this._startTime = startTime;
-    this._endTime = endTime;
-    this._price = price;
+  constructor({ point = DEFAULT_POINT, destinations = [], offers = [], isNew = false } = {}) {
+    this._point = point;
+    this._destinations = destinations;
     this._offers = offers;
-    this._description = description;
-    this._photos = photos;
     this._isNew = isNew;
   }
 
   _renderTypeItems() {
+    const { id, type } = this._point;
+
     return EVENT_TYPES.map((t) => `
       <div class="event__type-item">
-        <input id="event-type-${t}-${this._id}" class="event__type-input  visually-hidden" type="radio" name="event-type" value="${t}"${t === this._type ? ' checked' : ''}>
-        <label class="event__type-label  event__type-label--${t}" for="event-type-${t}-${this._id}">${t.charAt(0).toUpperCase() + t.slice(1)}</label>
+        <input id="event-type-${t}-${id}" class="event__type-input  visually-hidden" type="radio" name="event-type" value="${t}"${t === type ? ' checked' : ''}>
+        <label class="event__type-label  event__type-label--${t}" for="event-type-${t}-${id}">${t.charAt(0).toUpperCase() + t.slice(1)}</label>
       </div>
     `).join('');
   }
 
   _renderDestinationOptions() {
-    return DESTINATIONS.map((d) => `<option value="${d}"></option>`).join('');
+    return this._destinations.map(({ name }) => `<option value="${name}"></option>`).join('');
   }
 
   _renderOffers() {
-    if (!this._offers.length) {
+    const offersByType = this._offers.filter((offer) => offer.type === this._point.type);
+
+    if (!offersByType.length) {
       return '';
     }
-    const items = this._offers.map(({ name, title, price, checked }) => `
+
+    const items = offersByType.map(({ id, title, price }) => `
       <div class="event__offer-selector">
-        <input class="event__offer-checkbox  visually-hidden" id="event-offer-${name}-${this._id}" type="checkbox" name="event-offer-${name}"${checked ? ' checked' : ''}>
-        <label class="event__offer-label" for="event-offer-${name}-${this._id}">
+        <input class="event__offer-checkbox  visually-hidden" id="event-offer-${id}" type="checkbox" name="event-offer-${id}"${this._point.offerIds.includes(id) ? ' checked' : ''}>
+        <label class="event__offer-label" for="event-offer-${id}">
           <span class="event__offer-title">${title}</span>
           &plus;&euro;&nbsp;
           <span class="event__offer-price">${price}</span>
@@ -67,14 +64,16 @@ export default class EditPoint {
   }
 
   _renderDestinationDetails() {
-    if (!this._description && !this._photos.length) {
+    const destination = this._destinations.find((item) => item.id === this._point.destinationId);
+
+    if (!destination || (!destination.description && !destination.pictures.length)) {
       return '';
     }
 
-    const photosHtml = this._photos.length ? `
+    const photosHtml = destination.pictures.length ? `
       <div class="event__photos-container">
         <div class="event__photos-tape">
-          ${this._photos.map((src) => `<img class="event__photo" src="${src}" alt="Event photo">`).join('')}
+          ${destination.pictures.map(({ src, description }) => `<img class="event__photo" src="${src}" alt="${description}">`).join('')}
         </div>
       </div>
     ` : '';
@@ -82,7 +81,7 @@ export default class EditPoint {
     return `
       <section class="event__section  event__section--destination">
         <h3 class="event__section-title  event__section-title--destination">Destination</h3>
-        ${this._description ? `<p class="event__destination-description">${this._description}</p>` : ''}
+        ${destination.description ? `<p class="event__destination-description">${destination.description}</p>` : ''}
         ${photosHtml}
       </section>
     `;
@@ -103,19 +102,24 @@ export default class EditPoint {
   }
 
   getTemplate() {
-    const typeLabel = this._type.charAt(0).toUpperCase() + this._type.slice(1);
+    const { id, type, destinationId, dateFrom, dateTo, basePrice } = this._point;
+    const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
+    const destination = this._destinations.find((item) => item.id === destinationId);
     const resetLabel = this._isNew ? 'Cancel' : 'Delete';
+    const destinationName = destination ? destination.name : '';
+    const startTime = dateFrom ? formatEditDate(dateFrom) : '';
+    const endTime = dateTo ? formatEditDate(dateTo) : '';
 
     return `
       <li class="trip-events__item">
         <form class="event event--edit" action="#" method="post">
           <header class="event__header">
             <div class="event__type-wrapper">
-              <label class="event__type  event__type-btn" for="event-type-toggle-${this._id}">
+              <label class="event__type  event__type-btn" for="event-type-toggle-${id}">
                 <span class="visually-hidden">Choose event type</span>
-                <img class="event__type-icon" width="17" height="17" src="img/icons/${this._type}.png" alt="Event type icon">
+                <img class="event__type-icon" width="17" height="17" src="img/icons/${type}.png" alt="Event type icon">
               </label>
-              <input class="event__type-toggle  visually-hidden" id="event-type-toggle-${this._id}" type="checkbox">
+              <input class="event__type-toggle  visually-hidden" id="event-type-toggle-${id}" type="checkbox">
 
               <div class="event__type-list">
                 <fieldset class="event__type-group">
@@ -126,29 +130,29 @@ export default class EditPoint {
             </div>
 
             <div class="event__field-group  event__field-group--destination">
-              <label class="event__label  event__type-output" for="event-destination-${this._id}">
+              <label class="event__label  event__type-output" for="event-destination-${id}">
                 ${typeLabel}
               </label>
-              <input class="event__input  event__input--destination" id="event-destination-${this._id}" type="text" name="event-destination" value="${this._destination}" list="destination-list-${this._id}">
-              <datalist id="destination-list-${this._id}">
+              <input class="event__input  event__input--destination" id="event-destination-${id}" type="text" name="event-destination" value="${destinationName}" list="destination-list-${id}">
+              <datalist id="destination-list-${id}">
                 ${this._renderDestinationOptions()}
               </datalist>
             </div>
 
             <div class="event__field-group  event__field-group--time">
-              <label class="visually-hidden" for="event-start-time-${this._id}">From</label>
-              <input class="event__input  event__input--time" id="event-start-time-${this._id}" type="text" name="event-start-time" value="${this._startTime}">
+              <label class="visually-hidden" for="event-start-time-${id}">From</label>
+              <input class="event__input  event__input--time" id="event-start-time-${id}" type="text" name="event-start-time" value="${startTime}">
               &mdash;
-              <label class="visually-hidden" for="event-end-time-${this._id}">To</label>
-              <input class="event__input  event__input--time" id="event-end-time-${this._id}" type="text" name="event-end-time" value="${this._endTime}">
+              <label class="visually-hidden" for="event-end-time-${id}">To</label>
+              <input class="event__input  event__input--time" id="event-end-time-${id}" type="text" name="event-end-time" value="${endTime}">
             </div>
 
             <div class="event__field-group  event__field-group--price">
-              <label class="event__label" for="event-price-${this._id}">
+              <label class="event__label" for="event-price-${id}">
                 <span class="visually-hidden">Price</span>
                 &euro;
               </label>
-              <input class="event__input  event__input--price" id="event-price-${this._id}" type="text" name="event-price" value="${this._price}">
+              <input class="event__input  event__input--price" id="event-price-${id}" type="text" name="event-price" value="${basePrice}">
             </div>
 
             <button class="event__save-btn  btn  btn--blue" type="submit">Save</button>

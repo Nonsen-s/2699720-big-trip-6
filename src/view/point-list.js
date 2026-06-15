@@ -2,7 +2,7 @@ import { createElement } from '../render.js';
 
 export default class PointList {
   getTemplate() {
-    return `<ul class="trip-events__list"></ul>`;
+    return '<ul class="trip-events__list"></ul>';
   }
 
   getElement() {
