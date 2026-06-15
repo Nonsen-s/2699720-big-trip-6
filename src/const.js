@@ -12,4 +12,18 @@ const EventType = {
 
 const EVENT_TYPES = Object.values(EventType);
 
-export { EventType, EVENT_TYPES };
+const FilterType = {
+  EVERYTHING: 'everything',
+  FUTURE: 'future',
+  PRESENT: 'present',
+  PAST: 'past',
+};
+
+const NoPointTextType = {
+  [FilterType.EVERYTHING]: 'Click New Event to create your first point',
+  [FilterType.FUTURE]: 'There are no future events now',
+  [FilterType.PRESENT]: 'There are no present events now',
+  [FilterType.PAST]: 'There are no past events now',
+};
+
+export { EventType, EVENT_TYPES, FilterType, NoPointTextType };
