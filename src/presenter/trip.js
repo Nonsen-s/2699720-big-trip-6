@@ -5,6 +5,10 @@ import Sort from '../view/sort.js';
 import PointList from '../view/point-list.js';
 import Point from '../view/point.js';
 import EditPoint from '../view/edit-point.js';
+import NoPoint from '../view/no-point.js';
+import { FilterType } from '../const.js';
+import { generateFilters } from '../utils/filter.js';
+import { generateTripInfo } from '../utils/trip-info.js';
 
 const Mode = {
   DEFAULT: 'DEFAULT',
@@ -25,22 +29,40 @@ export default class TripPresenter {
   }
 
   init() {
-    this.#renderTripInfo();
+    if (this.#tripModel.points.length > 0) {
+      this.#renderTripInfo();
+    }
+
     this.#renderFilter();
-    this.#renderSort();
-    this.#renderPointList();
+    this.#renderTripEvents();
   }
 
   #renderTripInfo() {
-    render(new TripInfo(), this.#tripMainContainer, RenderPosition.AFTERBEGIN);
+    const tripInfo = generateTripInfo(
+      this.#tripModel.points,
+      this.#tripModel.destinations,
+      this.#tripModel.offers
+    );
+
+    render(new TripInfo({ tripInfo }), this.#tripMainContainer, RenderPosition.AFTERBEGIN);
   }
 
   #renderFilter() {
-    render(new Filter(), this.#filterContainer);
+    render(new Filter({ filters: generateFilters(this.#tripModel.points) }), this.#filterContainer);
   }
 
   #renderSort() {
     render(new Sort(), this.#tripEventsContainer);
+  }
+
+  #renderTripEvents() {
+    if (this.#tripModel.points.length === 0) {
+      render(new NoPoint({ filterType: FilterType.EVERYTHING }), this.#tripEventsContainer);
+      return;
+    }
+
+    this.#renderSort();
+    this.#renderPointList();
   }
 
   #renderPointList() {
