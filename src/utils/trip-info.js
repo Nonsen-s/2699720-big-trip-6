@@ -1,24 +1,31 @@
-function formatTripDate(date) {
-  const parsedDate = new Date(date);
-  const day = String(parsedDate.getDate()).padStart(2, '0');
-  const month = new Intl.DateTimeFormat('en-US', { month: 'short' }).format(parsedDate);
+import dayjs from 'dayjs';
+import { sortPointsByDay } from './sort.js';
 
-  return `${day} ${month}`;
+const ROUTE_LIMIT = 3;
+
+function formatTripDate(date) {
+  return dayjs(date).format('DD MMM');
 }
 
 function getTripTitle(points, destinations) {
-  return points
+  const sortedPoints = [...points].sort(sortPointsByDay);
+  const routePoints = sortedPoints
     .map((point) => destinations.find((destination) => destination.id === point.destinationId)?.name)
-    .filter((name, index, names) => name && names.indexOf(name) === index)
-    .join(' &mdash; ');
+    .filter((name) => name);
+
+  if (routePoints.length > ROUTE_LIMIT) {
+    return `${routePoints[0]} &mdash; ... &mdash; ${routePoints[routePoints.length - 1]}`;
+  }
+
+  return routePoints.join(' &mdash; ');
 }
 
 function getTripDates(points) {
-  const dates = points.flatMap((point) => [point.dateFrom, point.dateTo]).sort();
-  const [dateFrom] = dates;
-  const dateTo = dates[dates.length - 1];
+  const sortedPoints = [...points].sort(sortPointsByDay);
+  const [firstPoint] = sortedPoints;
+  const lastPoint = sortedPoints[sortedPoints.length - 1];
 
-  return `${formatTripDate(dateFrom)}&nbsp;&mdash;&nbsp;${formatTripDate(dateTo)}`;
+  return `${formatTripDate(firstPoint.dateFrom)}&nbsp;&mdash;&nbsp;${formatTripDate(lastPoint.dateTo)}`;
 }
 
 function getTripCost(points, offers) {
