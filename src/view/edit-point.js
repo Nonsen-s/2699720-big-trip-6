@@ -1,4 +1,4 @@
-import AbstractView from '../framework/view/abstract-view.js';
+import AbstractStatefulView from '../framework/view/abstract-stateful-view.js';
 import { EVENT_TYPES } from '../const.js';
 import { formatEditDate } from '../utils/point.js';
 
@@ -12,8 +12,7 @@ const DEFAULT_POINT = {
   basePrice: '',
 };
 
-export default class EditPoint extends AbstractView {
-  #point = null;
+export default class EditPoint extends AbstractStatefulView {
   #destinations = [];
   #offers = [];
   #isNew = false;
@@ -22,14 +21,14 @@ export default class EditPoint extends AbstractView {
 
   constructor({ point = DEFAULT_POINT, destinations = [], offers = [], isNew = false } = {}) {
     super();
-    this.#point = point;
+    this._state = EditPoint.parsePointToState(point);
     this.#destinations = destinations;
     this.#offers = offers;
     this.#isNew = isNew;
   }
 
   #renderTypeItems() {
-    const { id, type } = this.#point;
+    const { id, type } = this._state;
 
     return EVENT_TYPES.map((t) => `
       <div class="event__type-item">
@@ -44,7 +43,7 @@ export default class EditPoint extends AbstractView {
   }
 
   #renderOffers() {
-    const offersByType = this.#offers.filter((offer) => offer.type === this.#point.type);
+    const offersByType = this.#offers.filter((offer) => offer.type === this._state.type);
 
     if (!offersByType.length) {
       return '';
@@ -52,7 +51,7 @@ export default class EditPoint extends AbstractView {
 
     const items = offersByType.map(({ id, title, price }) => `
       <div class="event__offer-selector">
-        <input class="event__offer-checkbox  visually-hidden" id="event-offer-${id}" type="checkbox" name="event-offer-${id}"${this.#point.offerIds.includes(id) ? ' checked' : ''}>
+        <input class="event__offer-checkbox  visually-hidden" id="event-offer-${id}" type="checkbox" name="event-offer-${id}" value="${id}"${this._state.offerIds.includes(id) ? ' checked' : ''}>
         <label class="event__offer-label" for="event-offer-${id}">
           <span class="event__offer-title">${title}</span>
           &plus;&euro;&nbsp;
@@ -72,7 +71,7 @@ export default class EditPoint extends AbstractView {
   }
 
   #renderDestinationDetails() {
-    const destination = this.#destinations.find((item) => item.id === this.#point.destinationId);
+    const destination = this.#destinations.find((item) => item.id === this._state.destinationId);
 
     if (!destination || (!destination.description && !destination.pictures.length)) {
       return '';
@@ -110,7 +109,7 @@ export default class EditPoint extends AbstractView {
   }
 
   get template() {
-    const { id, type, destinationId, dateFrom, dateTo, basePrice } = this.#point;
+    const { id, type, destinationId, dateFrom, dateTo, basePrice } = this._state;
     const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
     const destination = this.#destinations.find((item) => item.id === destinationId);
     const resetLabel = this.#isNew ? 'Cancel' : 'Delete';
@@ -189,6 +188,27 @@ export default class EditPoint extends AbstractView {
     }
   }
 
+  setInnerHandlers() {
+    this.#setInnerHandlers();
+  }
+
+  _restoreHandlers() {
+    this.setFormSubmitHandler(this.#handleFormSubmit);
+    this.setRollupClickHandler(this.#handleRollupClick);
+    this.#setInnerHandlers();
+  }
+
+  #setInnerHandlers() {
+    this.element.querySelector('.event__type-group').addEventListener('change', this.#typeChangeHandler);
+    this.element.querySelector('.event__input--destination').addEventListener('change', this.#destinationChangeHandler);
+
+    const offersContainer = this.element.querySelector('.event__available-offers');
+
+    if (offersContainer) {
+      offersContainer.addEventListener('change', this.#offerChangeHandler);
+    }
+  }
+
   #formSubmitHandler = (evt) => {
     evt.preventDefault();
     this.#handleFormSubmit();
@@ -198,4 +218,49 @@ export default class EditPoint extends AbstractView {
     evt.preventDefault();
     this.#handleRollupClick();
   };
+
+  #typeChangeHandler = (evt) => {
+    evt.preventDefault();
+
+    if (!EVENT_TYPES.includes(evt.target.value)) {
+      return;
+    }
+
+    this.updateElement({
+      type: evt.target.value,
+      offerIds: [],
+    });
+  };
+
+  #destinationChangeHandler = (evt) => {
+    evt.preventDefault();
+
+    const selectedDestination = this.#destinations.find(({ name }) => name === evt.target.value);
+
+    if (!selectedDestination) {
+      return;
+    }
+
+    this.updateElement({
+      destinationId: selectedDestination.id,
+    });
+  };
+
+  #offerChangeHandler = (evt) => {
+    evt.preventDefault();
+
+    const selectedOffers = Array.from(this.element.querySelectorAll('.event__offer-checkbox:checked'))
+      .map((offer) => offer.value);
+
+    this._setState({
+      offerIds: selectedOffers,
+    });
+  };
+
+  static parsePointToState(point) {
+    return {
+      ...point,
+      offerIds: [...point.offerIds],
+    };
+  }
 }
