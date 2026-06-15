@@ -63,6 +63,7 @@ export default class PointPresenter {
     this.#editPointComponent.setRollupClickHandler(() => {
       this.#replaceFormToCard();
     });
+    this.#editPointComponent.setInnerHandlers();
 
     if (prevPointComponent === null || prevEditPointComponent === null) {
       render(this.#pointComponent, this.#pointListContainer);
