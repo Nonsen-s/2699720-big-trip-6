@@ -18,4 +18,8 @@ export default class TripModel {
   get offers() {
     return this._offers;
   }
+
+  updatePoint(update) {
+    this._points = this._points.map((point) => point.id === update.id ? update : point);
+  }
 }
